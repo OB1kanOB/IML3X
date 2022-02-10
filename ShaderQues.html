@@ -1,0 +1,186 @@
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+  <style>
+    body {
+      margin: 0px;
+      overflow: hidden;
+    }
+    .grid-container {
+  display: grid;
+  grid-template-columns: auto auto auto;
+}
+.grid-item {
+  display: inline-grid;
+}
+  </style>
+  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+  <div class="grid-container">
+      <model-viewer src="1644498258086.gltf" ar ar-modes="webxr scene-viewer quick-look" seamless-poster shadow-intensity="1" camera-controls style="width:300px; height:300px"></model-viewer>
+
+    <model-viewer src="1644498669474.gltf" ar ar-modes="webxr scene-viewer quick-look" seamless-poster shadow-intensity="1" camera-controls style="width:300px; height:300px"></model-viewer>
+
+  <model-viewer class="grid-item" src="1644498894392.gltf" ar ar-modes="webxr scene-viewer quick-look" seamless-poster shadow-intensity="1" camera-controls style="width:300px; height:300px"></model-viewer>
+  <model-viewer class="grid-item" src="1644502411554.gltf" ar ar-modes="webxr scene-viewer quick-look" seamless-poster shadow-intensity="1" camera-controls style="width:300px; height:300px"></model-viewer>
+  <model-viewer class="grid-item" src="1644501943204.gltf" ar ar-modes="webxr scene-viewer quick-look" seamless-poster shadow-intensity="1" camera-controls style="width:300px; height:300px"></model-viewer>
+  </div>
+</head>
+
+<body>
+  <div id="container"></div>
+
+  <script id="vertexShader" type="x-shader/x-vertex">
+        uniform float time;
+        uniform vec2 resolution;
+        varying vec2 vUv;
+        void main()	
+        {  
+            vUv= uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4 (position.x, position.y, position.z,1.);//+cos(position.x*15.0)*cos(time)/20.0, 1.0);
+        }
+    </script>
+
+  <script id="fragmentShader" type="x-shader/x-fragment">
+        uniform float time;
+        uniform float min;
+        uniform float max;
+        uniform vec2 resolution;
+        uniform sampler2D tex;
+        varying vec2 vUv;
+
+        void main()	
+        { 
+          vec3 texColor = texture2D ( tex, vUv ).rgb;
+          if(texColor.x < min || texColor.x > max) discard;
+            gl_FragColor = vec4(texColor, 1.0);
+        }
+    </script>
+  <script type="module">
+    import * as THREE from 'https://cdn.skypack.dev/three@0.136.0/build/three.module.js';
+    import { OrbitControls } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/controls/OrbitControls.js';
+    import { GLTFLoader } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/loaders/GLTFLoader.js';
+    
+
+    var container;
+    var camera, scene, renderer, controls;
+    var material, mesh;
+    var uniforms = [];
+    var windowHalfX = window.innerWidth / 2;
+    var windowHalfY = window.innerHeight / 2;
+
+    init();
+    var startTime = Date.now();
+    animate();
+
+    function init() {
+      container = document.getElementById('container');
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color( 0xffffff );
+
+      uniforms[0] = {
+        time: { type: "f", value: 1.0},
+        min: {type:"f", value:0.0},
+        max: {type:"f", value:0.5},
+        resolution: { type: "v2", value: new THREE.Vector2() },
+        tex: { type: "t", value: THREE.ImageUtils.loadTexture("grenouille.jpg") }
+      };
+      uniforms[1] = {
+        time: { type: "f", value: 1.0},
+        min: {type:"f", value:0.5},
+        max: {type:"f", value:0.6},
+        resolution: { type: "v2", value: new THREE.Vector2() },
+        tex: { type: "t", value: THREE.ImageUtils.loadTexture("grenouille.jpg") }
+      };
+      uniforms[2] = {
+        time: { type: "f", value: 1.0},
+        min: {type:"f", value:0.6},
+        max: {type:"f", value:1.0},
+        resolution: { type: "v2", value: new THREE.Vector2() },
+        tex: { type: "t", value: THREE.ImageUtils.loadTexture("grenouille.jpg") }
+      };
+
+      function createMaterial(ind)
+      {
+        
+        //uniforms.min.value = min;
+        //uniforms.max.value = max;
+        var uni = JSON.parse(JSON.stringify(uniforms));
+      var material =  new THREE.ShaderMaterial({
+        uniforms: uniforms[ind],
+        vertexShader: document.getElementById('vertexShader').textContent,
+        fragmentShader: document.getElementById('fragmentShader').textContent
+      });
+      /*material.onBeforeCompile = function( shader ) {
+          uniforms.min.value = min;
+        uniforms.max.value = max;
+        };
+        */
+        return material;
+    }
+
+      var geometry = new THREE.PlaneGeometry(1, 1, 100, 100);
+
+      mesh = new THREE.Mesh(geometry, createMaterial(0));
+      mesh.material.side = THREE.DoubleSide;
+
+      var mesh2 = new THREE.Mesh(geometry, createMaterial(1));
+      mesh2.material.side = THREE.DoubleSide;
+      mesh2.position.z = 0.3;
+
+      var mesh3 = new THREE.Mesh(geometry, createMaterial(2));
+      mesh3.material.side = THREE.DoubleSide;
+      mesh3.position.z = 0.6;
+      //mesh.rotation.x = Math.PI / 2.0;
+      //mesh.rotation.z = Math.PI;
+
+      //scene.add(mesh);
+      //scene.add(mesh2);
+      //scene.add(mesh3);
+
+      const loader = new GLTFLoader();
+
+loader.load( 'MaterialsVariantsShoe.gltf', function ( gltf ) {
+
+	scene.add( gltf.scene );
+  render();
+
+}, undefined, function ( error ) {
+
+	console.error( error );
+
+} );
+
+
+      renderer = new THREE.WebGLRenderer();
+      renderer.setPixelRatio(window.devicePixelRatio ? window.devicePixelRatio : 1);
+      container.appendChild(renderer.domElement);
+
+      camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, .1, 200);
+      //camera.position.set(0, 0, 3);
+      camera.position.z = 1000;
+
+      controls = new OrbitControls(camera, renderer.domElement);
+
+      uniforms[0].resolution.value.x = window.innerWidth;
+      uniforms[0].resolution.value.y = window.innerHeight;
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+      render();
+    }
+
+    function render() {
+      var elapsedMilliseconds = Date.now() - startTime;
+      var elapsedSeconds = elapsedMilliseconds / 1000.;
+      uniforms[0].time.value = elapsedSeconds;
+      renderer.render(scene, camera);
+    }
+  </script>
+</body>
+
+</html>
